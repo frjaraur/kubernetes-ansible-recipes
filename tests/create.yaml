@@ -1,0 +1,123 @@
+- name: test
+  hosts: localhost
+  connection: local 
+  gather_facts: yes
+  vars:
+    kubeconfig: /home/zero/.kube/config
+  tasks:
+
+  - name: Create a k8s namespace
+    kubernetes.core.k8s:
+      name: testing
+      api_version: v1
+      kind: Namespace
+      state: present
+
+  - name: Create Low Priority Classes
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        api_version: scheduling.k8s.io/v1
+        kind: PriorityClass
+        metadata:
+          name: low-priority
+          namespace: testing
+        value: -20000000
+        globalDefault: false
+        description: "Low priority"
+
+  - name: Create High Priority Classes
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        api_version: scheduling.k8s.io/v1
+        kind: PriorityClass
+        metadata:
+          name: high-priority
+          namespace: testing
+        value: -10000000
+        preemptionPolicy: PreemptLowerPriority
+        globalDefault: false
+        description: "Low priority"
+
+  - name: Create resource Quota
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        api_version: v1
+        kind: ResourceQuota
+        metadata:
+          name: test
+          namespace: testing
+        spec:
+          hard:
+            cpu: "2"
+            memory: 2Gi
+            pods: "5"
+
+  - name: Low Priority Deployment
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        api_version: v1
+        kind: Deployment
+        metadata:
+          name: low
+          namespace: testing
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: low
+          template:
+            metadata:
+              labels:
+                app: low
+            spec:
+              containers:
+              - name: busybox
+                image: busybox:latest
+                command:
+                - sleep
+                - 1d
+                resources:
+                  requests:
+                    memory: "500Mi"
+                    cpu: "250m"
+                  limits:
+                    memory: "1Gi"
+                    cpu: "500m"
+
+  - name: High Priority Deployment
+    kubernetes.core.k8s:
+      state: present
+      definition:
+        api_version: v1
+        kind: Deployment
+        metadata:
+          name: high
+          namespace: testing
+        spec:
+          replicas: 0
+          selector:
+            matchLabels:
+              app: high
+          template:
+            metadata:
+              labels:
+                app: high
+            spec:
+              containers:
+              - name: busybox
+                image: busybox:latest
+                command:
+                - sleep
+                - 1d
+                resources:
+                  requests:
+                    memory: "500Mi"
+                    cpu: "250m"
+                  limits:
+                    memory: "1Gi"
+                    cpu: "500m"
+

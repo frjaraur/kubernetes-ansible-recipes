@@ -1,0 +1,43 @@
+- name: test
+  hosts: localhost
+  connection: local 
+  gather_facts: yes
+  vars:
+    kubeconfig: /home/zero/.kube/config
+  tasks:
+
+  - name: Delete Low Deployment
+    kubernetes.core.k8s:
+      name: low
+      api_version: v1
+      kind: Deployment
+      state: absent
+
+  - name: Delete High Deployment
+    kubernetes.core.k8s:
+      name: test
+      api_version: v1
+      kind: ResourceQuota
+      state: absent
+
+  - name: Delete Resource Quota
+    kubernetes.core.k8s:
+      name: high
+      api_version: v1
+      kind: Deployment
+      state: absent
+
+  - name: Delete Low Deployment
+    kubernetes.core.k8s:
+      name: low-priority
+      api_version: scheduling.k8s.io/v1
+      kind: PriorityClass
+      state: absent
+
+
+  # - name: Create a k8s namespace
+  #   kubernetes.core.k8s:
+  #     name: testing
+  #     api_version: v1
+  #     kind: Namespace
+  #     state: absent
